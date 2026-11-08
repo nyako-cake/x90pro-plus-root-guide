@@ -204,6 +204,19 @@ fastboot reboot
 
 ---
 
+## 工具脚本
+
+| 脚本 | 用途 |
+|---|---|
+| `scripts/extract_payload.py` | 从 OTA `payload.bin` 提取 boot / init_boot / vendor_boot |
+| `scripts/vendor_boot_tool.py` | 解析 vendor_boot v3/v4、解压 LZ4 legacy、列出/查找 cpio 里的 `vr.ko` 等 |
+| `scripts/patch_inactive_slot.sh` | 给非当前槽的 `init_boot` 打 SukiSU 补丁（`--block-vr` 可选），用于 OTA 后保留 root |
+| `scripts/extract_kos.py` / `patch_ko.py` / `repack_apk.py` | DirtyFrag 的 ko 提取 / 打补丁 / APK 重打包 |
+
+本次操作涉及的镜像哈希、检测器日志位置见 [`docs/session-artifacts.md`](docs/session-artifacts.md)。
+
+---
+
 ## 附录 A：临时 root / DirtyFrag 适配（不刷机路线）
 
 > 完整步骤、CRC 表和命令见 [`docs/dirtyfrag-vr-adaptation.md`](docs/dirtyfrag-vr-adaptation.md)。
