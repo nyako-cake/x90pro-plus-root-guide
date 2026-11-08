@@ -1,9 +1,9 @@
 # vivo X90 Pro+（PD2227）解锁 BL + 持久 KernelSU Root 实录
 
 > 设备：vivo X90 Pro+（V2227A / PD2227，QTI SM8550）
-> 系统：PD2227_A_14.1.15.11.W10.V000L1（Android 14）
-> 内核：5.15.137-ge30fcc60efc0-dirty
-> 结果：**bootloader 已解锁 + KernelSU LKM 持久 root（重启不丢）**
+> 系统：Android 15，`PD2227C_A_15.2.11.1.W10.V000L1`（原 Android 14 `PD2227_A_14.1.15.11`）
+> 内核：`5.15.178-gf4fc3f9ca234-dirty`（原 `5.15.137-ge30fcc60efc0-dirty`）
+> 结果：**bootloader 已解锁 + KernelSU/SukiSU LKM 持久 root（重启、OTA 升级后均保留）**
 
 ---
 
@@ -30,6 +30,8 @@ uid=0(root) gid=0(root) groups=0(root) context=u:r:ksu:s0
 ```
 
 重启后依旧有效（KSU 通过修补过的 `init_boot` 开机加载）。
+
+> 后续升级到 Android 15 并换用 SukiSU 后，`kernelsu` 模块大小为 561152，状态同样是 `Live`，`su` 仍返回 `u:r:ksu:s0`。
 
 ---
 
@@ -142,6 +144,66 @@ fastboot reboot
 
 ---
 
+## 第三部分：OTA 升级（Android 14 → 15）后保留 root
+
+> 2025-11 实测：系统 OTA 全量包（`PD2227_A_15.2.11.1`）会写入**非当前槽**（b → a），并把该槽的 `init_boot` 覆盖为原厂，root 会丢失。
+> 只要在重启前把新槽的 `init_boot` 用当前 root 打好补丁再刷回去，就能带着 root 升级。
+
+### 1. 确认 OTA 状态
+
+```sh
+getprop ro.boot.slot_suffix            # 当前槽，例如 _b
+# OTA 包元数据里能看到目标版本（需要 root 读 /data/ota_package）
+unzip -p /data/ota_package/OTAPackage/*.zip META-INF/com/android/metadata | grep -E 'post-build|post-version'
+```
+
+### 2. 取出非当前槽的原厂 init_boot
+
+```sh
+# 当前是 b，新系统在 a
+dd if=/dev/block/by-name/init_boot_a of=/sdcard/init_boot_a.img bs=4096
+```
+
+核对头部是 `ANDROID!`、ramdisk 大小与旧版不同（说明是 OTA 写入的新镜像）。
+
+### 3. 用当前 root 打补丁（顺便屏蔽 vr）
+
+新内核仍是 5.15，KMI 继续选 `android13-5.15`；`--block-module vr` 顺带解决模块页问题（见附录 C）：
+
+```sh
+su -c '/data/adb/ksud boot-patch -b /sdcard/init_boot_a.img \
+       --kmi android13-5.15 --partition init_boot \
+       --block-module vr -o /sdcard/Download'
+```
+
+### 4. 重启前刷入目标槽
+
+```sh
+adb reboot bootloader
+fastboot flash init_boot_a kernelsu_patched_*.img
+fastboot reboot
+```
+
+### 5. 验证
+
+```sh
+getprop ro.build.version.release        # 15
+getprop ro.build.display.id             # PD2227C_A_15.2.11.1.W10
+grep kernelsu /proc/modules             # Live
+su -c id                                # uid=0(root) ... u:r:ksu:s0
+```
+
+### 6. 回滚
+
+旧槽（b）仍保留升级前的系统与补丁，必要时：
+
+```sh
+fastboot set_active b
+fastboot reboot
+```
+
+---
+
 ## 附录 A：临时 root / DirtyFrag 适配（不刷机路线）
 
 > 完整步骤、CRC 表和命令见 [`docs/dirtyfrag-vr-adaptation.md`](docs/dirtyfrag-vr-adaptation.md)。
@@ -194,9 +256,9 @@ fastboot reboot
 
 ## 附录 C：已知问题
 
-- **vr.ko**：vivo 的反 root 模块仍在 `vendor_boot`/`vendor_dlkm` 中；目前 KernelSU 可以共存，若出现管理器被杀、黑屏等，需要按社区方案处理 `vendor_boot` 中的 `vr.ko`。
-- **OTA**：系统更新会覆盖 `init_boot`，root 丢失；更新后需重新修补。部分更新可能重新锁定 BL。
-- **KMI**：vivo 内核串不含 `androidNN`，KernelSU 修补时必须手动选 `android13-5.15`。
+- **vr.ko（已解决）**：vivo 的反 root 模块会在 `sys_exit` 杀掉「App 起源且已拿到 root」的进程，导致 KernelSU/SukiSU 的「模块」页无限加载（`ksud module list` 的 root shell 被杀）。用 `ksud boot-patch --block-module vr` 把 vr 在内核启动时屏蔽即可，详见 [`docs/vr-ko-module-page-fix.md`](docs/vr-ko-module-page-fix.md)。
+- **OTA**：系统更新会覆盖新槽的 `init_boot`，root 丢失；按[第三部分](#第三部分ota-升级android-14--15后保留-root)的做法可以在升级前把新槽补丁刷入，升级后 root 仍在。部分更新可能重新锁定 BL。
+- **KMI**：vivo 内核串不含 `androidNN`，KernelSU/SukiSU 修补时必须手动选 `android13-5.15`（5.15 内核升级到 5.15.178 后仍然如此）。
 
 ---
 
@@ -204,7 +266,7 @@ fastboot reboot
 
 - devinfo 解锁思路：[酷安 @O5大帝](https://www.coolapk.com/feed/74900704)
 - 临时 root 引擎：[diabl0w/DFRoot](https://github.com/diabl0w/DFRoot)、[DONGDERS/DirtyFalg-vr](https://github.com/DONGDERS/DirtyFalg-vr)
-- Root 方案：[tiann/KernelSU](https://github.com/tiann/KernelSU)
+- Root 方案：[tiann/KernelSU](https://github.com/tiann/KernelSU)、[SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra)（LKM + `--block-module`）
 - 内核符号恢复：[vmlinux-to-elf](https://github.com/marin-m/vmlinux-to-elf)
 
 ## 许可
