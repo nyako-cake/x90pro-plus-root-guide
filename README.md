@@ -144,6 +144,8 @@ fastboot reboot
 
 ## 附录 A：临时 root / DirtyFrag 适配（不刷机路线）
 
+> 完整步骤、CRC 表和命令见 [`docs/dirtyfrag-vr-adaptation.md`](docs/dirtyfrag-vr-adaptation.md)。
+
 在解锁前，我们用 DirtyFrag-vr 的临时 root 拿到了写 devinfo 的权限。原版在 5.15.137 上会卡在 `libc++: loading custom module`，原因与修复如下。
 
 ### A.1 失败原因
