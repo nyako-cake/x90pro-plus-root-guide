@@ -15,18 +15,22 @@
 | `init_boot_patched.img` | 8,388,608 | `e28e22986a3909203389667214df2cf696836324e7f2f6df45f76b36785f2e9c` | KernelSU 3.3.1 补丁（Android 14，KMI android13-5.15） |
 | `init_boot_sukisu.img` | 8,388,608 | `d18bd17cec63622a47f5a4c9e6fa1b249aa67ceac46cc026ef4e42b185c1fa72` | SukiSU 4.3.0-r2 补丁（Android 14） |
 | `init_boot_a_sukisu.img` | 8,388,608 | `5ec9e0e8a36467a009d57825e97514f34d5ae943f7db4231952db892c6d29896` | Android 15 新槽补丁（**vr 仍在**） |
-| `init_boot_a_novr.img` | 8,388,608 | `f603ceef3be72bcb56ebe2a58d2da03081507391ff0fd1fa20088526c28c015f` | Android 15 新槽补丁 + `--block-module vr`（当前使用） |
+| `init_boot_a_novr.img` | 8,388,608 | `f603ceef3be72bcb56ebe2a58d2da03081507391ff0fd1fa20088526c28c015f` | Android 15 新槽补丁 + `--block-module vr`（a 槽，作为回滚保留） |
+| `init_boot_b_a16_novr.img` | 8,388,608 | `22a7250033f557b5ddcfb99dbdbf03f19809e2f3902781f743c4ee06161e5f0f` | Android 16 新槽补丁 + `--block-module vr`（b 槽，**当前使用**） |
 
-> 当前设备：Android 15 `PD2227C_A_15.2.11.1.W10`，内核 `5.15.178-gf4fc3f9ca234-dirty`，槽位 `_a`。
+> 当前设备：Android 16 `PD2227C_A_16.3.14.0.W10`，内核 `5.15.197-g346b1c36bd5c-dirty`，槽位 `_b`。
+> 旧槽 `_a` 保留 Android 15 `PD2227C_A_15.2.11.1` + SukiSU 补丁，可 `fastboot set_active a` 回滚。
 
 ## 二、设备侧补丁产物（`/sdcard/Download/`）
 
 | 文件 | 说明 |
 |---|---|
 | `init_boot_a.img` | 从 `init_boot_a` 分区 dump 出的 Android 15 原厂镜像 |
+| `init_boot_b.img` | 从 `init_boot_b` 分区 dump 出的 Android 16 原厂镜像 |
 | `kernelsu_patched_20261108_095448.img` | SukiSU 补丁（A14 init_boot，vr 未屏蔽） |
 | `kernelsu_patched_20261108_104548.img` | SukiSU 补丁（A15 init_boot，vr 未屏蔽） |
 | `kernelsu_patched_20261108_111652.img` | SukiSU 补丁（A15 init_boot，`--block-module vr`） |
+| `kernelsu_patched_20261108_122110.img` | SukiSU 补丁（A16 init_boot，`--block-module vr`，已刷入 b 槽） |
 
 ## 三、检测器日志（`com.chunqiunativecheck` v4.6.2）
 
