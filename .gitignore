@@ -1,0 +1,17 @@
+# vendor images / blobs
+*.img
+*.bin
+*.apk
+*.so
+*.ko
+*.jks
+*.keystore
+
+# build output
+build/
+out/
+dist/
+
+# scratch
+*.log
+crcs.json
