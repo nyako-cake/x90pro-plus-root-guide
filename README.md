@@ -270,6 +270,9 @@ fastboot reboot
 | `scripts/vendor_boot_tool.py` | 解析 vendor_boot v3/v4、解压 LZ4 legacy、列出/查找 cpio 里的 `vr.ko` 等 |
 | `scripts/patch_inactive_slot.sh` | 给非当前槽的 `init_boot` 打 SukiSU 补丁（`--block-vr` 可选），用于 OTA 后保留 root |
 | `scripts/extract_kos.py` / `patch_ko.py` / `repack_apk.py` | DirtyFrag 的 ko 提取 / 打补丁 / APK 重打包 |
+| [`docs/build-your-own.md`](docs/build-your-own.md) | **自己构建适配包**：用你自己的 OTA 镜像重新生成 ko/APK（跨版本、跨机型通用） |
+
+同版本成品包（仅 PD2227 / `14.1.15.11` / 5.15.137）见 [Releases](https://github.com/nyako-cake/x90pro-plus-root-guide/releases)。
 
 本次操作涉及的镜像哈希、检测器日志位置见 [`docs/session-artifacts.md`](docs/session-artifacts.md)。
 
