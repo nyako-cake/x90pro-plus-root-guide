@@ -1,4 +1,4 @@
-# vivo X90 Pro+（PD2227）Root 实录与工具集
+﻿# vivo X90 Pro+（PD2227）Root 实录与工具集
 
 > 一台 vivo X90 Pro+ 从零到持久 root 的完整记录：devinfo 解锁 bootloader、DirtyFrag 临时 root 适配、KernelSU/SukiSU 持久化、OTA 升级保留 root、vr.ko 问题定位。
 >
@@ -48,6 +48,7 @@ uid=0(root) gid=0(root) groups=0(root) context=u:r:ksu:s0
 | [`docs/full-root-walkthrough.md`](docs/full-root-walkthrough.md) | **完整流程**：7 个阶段、工具清单、命令速查、踩坑表 |
 | [`docs/dirtyfrag-vr-adaptation.md`](docs/dirtyfrag-vr-adaptation.md) | DirtyFrag 适配细节：ko、CRC、vermagic、APK 重签 |
 | [`docs/vr-ko-module-page-fix.md`](docs/vr-ko-module-page-fix.md) | vr.ko 导致模块页无限加载的根因与修复 |
+| [`docs/kernelsu-a16-5.15-incompatibility.md`](docs/kernelsu-a16-5.15-incompatibility.md) | KernelSU 在 Android 16 + 5.15 上无法启动的原因与实测 |
 | [`docs/build-your-own.md`](docs/build-your-own.md) | 用你自己的 OTA 重新构建适配包 |
 | [`docs/verified-offsets.md`](docs/verified-offsets.md) | 内核符号/结构偏移 |
 | [`docs/evidence.md`](docs/evidence.md) | 关键命令输出证据 |
@@ -63,6 +64,7 @@ uid=0(root) gid=0(root) groups=0(root) context=u:r:ksu:s0
 |---|---|---|---|
 | PD2227 / X90 Pro+ | `14.1.15.11`（Android 14） | `5.15.137` | ✅ 本仓库实测 |
 | PD2227 / X90 Pro+ | `15.2.11.1`（Android 15） | `5.15.178` | ✅ 持久 root 已实测；临时 root 需重做 |
+| PD2227 / X90 Pro+ | `16.3.14.0`（Android 16） | `5.15.197` | ⚠️ SukiSU 可用；KernelSU 3.3.1 无法启动（[说明](docs/kernelsu-a16-5.15-incompatibility.md)） |
 | 其他 vivo / iQOO | 任意 | 任意 | ❌ 需自行适配 |
 | 其他品牌 | 任意 | 任意 | ❌ 不适用 |
 
@@ -375,7 +377,8 @@ fastboot reboot
 
 - **vr.ko（已解决）**：vivo 的反 root 模块会在 `sys_exit` 杀掉「App 起源且已拿到 root」的进程，导致 KernelSU/SukiSU 的「模块」页无限加载。用 `ksud boot-patch --block-module vr` 在内核启动时屏蔽即可，详见 [`docs/vr-ko-module-page-fix.md`](docs/vr-ko-module-page-fix.md)。
 - **OTA**：系统更新会覆盖新槽的 `init_boot`，root 丢失；按第四部分在升级前刷入补丁即可保留。部分更新可能重新锁定 BL。
-- **KMI**：vivo 内核串不含 `androidNN`，修补时必须手动选 `android13-5.15`（升级到 5.15.178 后仍然如此）。
+- **KMI**：vivo 内核串不含 `androidNN`，修补时必须手动选 `android13-5.15`（升级到 5.15.178 / 5.15.197 后仍然如此）。
+- **KernelSU（A16 + 5.15）**：KernelSU 3.3.1 的 `android13-5.15` LKM 与 vivo 5.15.197 内核的 vermagic / 符号 CRC 不匹配，`ksuinit` 卡住导致无法开机；请继续使用 SukiSU，详见 [`docs/kernelsu-a16-5.15-incompatibility.md`](docs/kernelsu-a16-5.15-incompatibility.md)。
 
 ---
 
