@@ -1,4 +1,4 @@
-# vivo X90 Pro+（PD2227）解锁 BL + 持久 KernelSU Root 实录
+﻿# vivo X90 Pro+（PD2227）解锁 BL + 持久 KernelSU Root 实录
 
 > 设备：vivo X90 Pro+（V2227A / PD2227，QTI SM8550）
 > 系统：Android 15，`PD2227C_A_15.2.11.1.W10.V000L1`（原 Android 14 `PD2227_A_14.1.15.11`）
@@ -32,6 +32,22 @@ uid=0(root) gid=0(root) groups=0(root) context=u:r:ksu:s0
 重启后依旧有效（KSU 通过修补过的 `init_boot` 开机加载）。
 
 > 后续升级到 Android 15 并换用 SukiSU 后，`kernelsu` 模块大小为 561152，状态同样是 `Live`，`su` 仍返回 `u:r:ksu:s0`。
+
+---
+
+## 📖 完整过程（工具 / 方法 / 顺序）
+
+按时间顺序的完整记录见 [`docs/full-root-walkthrough.md`](docs/full-root-walkthrough.md)：
+
+- 阶段一：侦察与可行性（DirtyFrag 日志、内核配置）
+- 阶段二：临时 root（DirtyFrag-vr 适配：ko 重打、CRC、vermagic、APK 重签）
+- 阶段三：devinfo 解锁 bootloader
+- 阶段四：KernelSU 持久 root（init_boot 补丁）
+- 阶段五：切换 SukiSU
+- 阶段六：OTA 升级 Android 15 并保留 root
+- 阶段七：vr.ko 修复（模块页无限加载）
+
+每个阶段都记录了「用了什么工具、做了什么、怎么验证、失败怎么处理」。
 
 ---
 
