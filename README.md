@@ -88,22 +88,36 @@ uid=0(root) gid=0(root) groups=0(root) context=u:r:ksu:s0
 
 ---
 
-## 第一部分：用 devinfo 解锁 bootloader
+## 第一部分：先获取临时 root（DirtyFrag 适配）
 
-> 思路来源：酷安 @O5大帝 的 iQOO Neo7 竞速版教程（[原帖](https://www.coolapk.com/feed/74900704)）。
-> 实测在 PD2227 上同样有效，devinfo 布局一致。
+> 先有 uid=0，才能读写 `devinfo` 完成解锁；临时 root 是整条链路真正意义上的第一步。
 
-### 1. 先拿到临时 root
+原版 DirtyFrag-vr 在本机 `5.15.137` 上加载 ko 失败（`insmod: Exec format error`），原因是 ko 没有 `__versions`、vermagic 也不匹配。我们做了这些适配：
 
-解锁 devinfo 需要 root 权限读写块设备。任选一种临时 root 方式（本仓库附录 A 记录了 DirtyFrag 的适配过程）。
+1. 从内核 `Image` 恢复 kallsyms 与导出符号（`vmlinux-to-elf` + `pyelftools`）；
+2. 给 `dfroot.ko` 注入 12 条 `__versions`（CRC 取自本机内核），并改写 `.modinfo` 的 vermagic；
+3. 修改 `bootstrap.c`（devinfo 备份/写回、`ksud late-load --kmi android13-5.15`），用 NDK 重编 `libdfroot.so`；
+4. 替换 APK 内的 `.so`，`zipalign` + `apksigner` 重签后安装运行。
+
+完成后 hook 会完成 page-cache 改写并加载临时 LKM。完整细节见 [`docs/dirtyfrag-vr-adaptation.md`](docs/dirtyfrag-vr-adaptation.md)。
 
 验证：
 
 ```sh
-su -c id    # uid=0
+su -c id
+# uid=0(root) gid=0(root) ...
 ```
 
-### 2. 备份并修改 devinfo
+---
+
+## 第二部分：用 devinfo 解锁 bootloader
+
+> 思路来源：酷安 @O5大帝 的 iQOO Neo7 竞速版教程（[原帖](https://www.coolapk.com/feed/74900704)）。
+> 实测在 PD2227 上同样有效，devinfo 布局一致。
+
+> 前置：已完成第一部分，`su -c id` 返回 `uid=0`。
+
+### 1. 备份并修改 devinfo
 
 ```sh
 # 备份（4 KB）
@@ -127,7 +141,7 @@ dd if=/dev/block/by-name/devinfo of=/sdcard/devinfo.img bs=4096 count=1
 dd if=/sdcard/devinfo_patched.img of=/dev/block/by-name/devinfo bs=4096 count=1
 ```
 
-### 3. 重启
+### 2. 重启
 
 重启后手机会提示解锁/清除数据，按提示确认；随后进入系统。验证：
 
@@ -146,7 +160,7 @@ getprop ro.boot.verifiedbootstate  # orange
 
 ---
 
-## 第二部分：KernelSU 持久 root
+## 第三部分：KernelSU 持久 root
 
 ### 1. 从 OTA 提取原厂镜像
 
@@ -188,7 +202,7 @@ fastboot reboot
 
 ---
 
-## 第三部分：OTA 升级（Android 14 → 15）后保留 root
+## 第四部分：OTA 升级（Android 14 → 15）后保留 root
 
 > 2025-11 实测：系统 OTA 全量包（`PD2227_A_15.2.11.1`）会写入**非当前槽**（b → a），并把该槽的 `init_boot` 覆盖为原厂，root 会丢失。
 > 只要在重启前把新槽的 `init_boot` 用当前 root 打好补丁再刷回去，就能带着 root 升级。
@@ -314,7 +328,7 @@ fastboot reboot
 ## 附录 C：已知问题
 
 - **vr.ko（已解决）**：vivo 的反 root 模块会在 `sys_exit` 杀掉「App 起源且已拿到 root」的进程，导致 KernelSU/SukiSU 的「模块」页无限加载（`ksud module list` 的 root shell 被杀）。用 `ksud boot-patch --block-module vr` 把 vr 在内核启动时屏蔽即可，详见 [`docs/vr-ko-module-page-fix.md`](docs/vr-ko-module-page-fix.md)。
-- **OTA**：系统更新会覆盖新槽的 `init_boot`，root 丢失；按[第三部分](#第三部分ota-升级android-14--15后保留-root)的做法可以在升级前把新槽补丁刷入，升级后 root 仍在。部分更新可能重新锁定 BL。
+- **OTA**：系统更新会覆盖新槽的 `init_boot`，root 丢失；按[第四部分](#第四部分ota-升级android-14--15后保留-root)的做法可以在升级前把新槽补丁刷入，升级后 root 仍在。部分更新可能重新锁定 BL。
 - **KMI**：vivo 内核串不含 `androidNN`，KernelSU/SukiSU 修补时必须手动选 `android13-5.15`（5.15 内核升级到 5.15.178 后仍然如此）。
 
 ---
